@@ -1,0 +1,78 @@
+<?php
+
+/**
+ * @file
+ * Form alter and other functionality for send_views form
+ */
+
+/**
+ * Implements hook_form_alter()
+ */
+function bulk_email_form_views_form_myroom_email_listing_ra_email_list_page_alter(&$form, &$form_state, $form_id) {
+  global $user;
+
+  // Set to information to name = identikey and email = email view results.
+  $form['to']['views_send_to_name']['#default_value'] = 'users_node_name_pos_4';
+  $form['to']['views_send_to_mail']['#default_value'] = 'users_node_mail_pos_9';
+
+  // Check that the logged in user is not an administrator before removing fields.
+  if (!in_array('administrator', $user->roles)){
+
+    // Get logged in staff (RA, HD) information for Sender information
+    $account = user_load($user->uid);
+
+    // Set Sender information to logged in RA or HD.
+    $account_name = $account->field_first_name[LANGUAGE_NONE][0]['value'] . ' ' . $account->field_last_name[LANGUAGE_NONE][0]['value'];
+
+    // Set and hide from name
+    $form['from']['#type'] = 'hidden';
+    $form['from']['views_send_from_name']['#default_value'] = $account_name;
+    $form['from']['views_send_from_mail']['#default_value'] = $user->mail;
+
+    // TODO: Set this to only work for RA's.
+    // Hide additional section, and set CC to HD. 
+    $form['additional']['#type'] = 'hidden';
+    $form['additional']['views_send_headers']['#default_value'] = bulk_email_hd_add($user->uid);
+
+    // Hide to field for non-admins
+    $form['to']['#type'] = 'hidden';
+    $form['views_send_direct']['#type'] = 'hidden';
+    $form['views_send_carbon_copy']['#type'] = 'hidden';
+    $form['views_send_remember']['#type'] = 'hidden';
+    $form['mail']['token']['#type'] = 'hidden';
+    $form['headers']['#type'] = 'hidden';
+
+    $form['mail']['views_send_message']['#description'] = t('Enter message body here.');
+    $form['actions']['submit']['#value'] = 'Review and Send';
+
+  }
+
+}
+
+/**
+ * Function to get HD's email address
+ * @param $uid
+ *  Drupal uid of RA
+ */
+function bulk_email_hd_add($uid) {
+
+  // Query to get HD's email address.
+  $query_hd = db_select('field_data_field_mr_res_adv', 'ra');
+  $query_hd -> fields('u', array('mail'));
+  $query_hd -> join('field_data_field_mr_rooms_adv', 'raroom', 'raroom.entity_id = ra.entity_id');
+  $query_hd -> join('field_data_field_mrf_room_id', 'room', 'raroom.field_mr_rooms_adv_target_id = room.field_mrf_room_id_target_id');
+  $query_hd -> join('field_data_field_mrf_owners', 'owners', 'owners.entity_id = room.entity_id AND owners.delta = 1');
+  $query_hd -> join('myroom_staff_item', 'staff', 'owners.field_mrf_owners_target_id = staff.id');
+  $query_hd -> join('users', 'u', 'u.uid = staff.user_id');
+  $query_hd -> condition('ra.field_mr_res_adv_target_id', $uid);
+  $query_hd -> range(0,1);
+
+  $result = $query_hd->execute();
+  foreach ($result as $key => $hd) {
+    $cc_name = $hd->mail;
+  }
+
+  $header_cc = t('cc: ') . $cc_name;
+
+  return $header_cc;
+}

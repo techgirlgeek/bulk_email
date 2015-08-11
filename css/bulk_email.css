@@ -1,0 +1,7 @@
+.page-myroom-profiles-emails #edit-views-send-message-format {
+  display: none;
+}
+
+.page-myroom-profiles-emails .active {
+  padding-left: 5px;
+}

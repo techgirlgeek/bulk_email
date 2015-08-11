@@ -1,0 +1,8 @@
+name = Bulk Email Custom Code
+description = Custom code for bulk emails
+core = 7.x
+package = OnCampus
+
+dependencies[] = views_send
+
+stylesheets[all][] = css/bulk_email.css
